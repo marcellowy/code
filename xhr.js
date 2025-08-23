@@ -5,7 +5,7 @@
 // @version      0.1
 // @description  try to take over the world!
 // @author       wusp
-// @match        https://ark.xiaohongshu.com/app-order/order/query
+// @match        https://mp.csdn.com/*
 // @exclude		   这个和 iclude 配合使用，排除匹配到的网址，优先于 include
 // @require      http://code.jquery.com/jquery-1.11.0.min.js
 // @grant        unsafeWindow
