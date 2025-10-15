@@ -55,6 +55,52 @@ loop:
 	return false, 0
 }
 
+func (w *WinService) waitServiceDelete(ctx context.Context, m *mgr.Mgr) {
+	var (
+		services []string
+		err      error
+	)
+	var result = make(chan bool, 1024)
+	go func() {
+		for {
+			if services, err = m.ListServices(); err != nil {
+				vlog.Warning(ctx, err)
+				time.Sleep(time.Second)
+				continue
+			}
+			var found bool
+			for _, service := range services {
+				if service == w.ServiceName {
+					found = true
+					break
+				}
+			}
+			if !found {
+				result <- false // not found
+				break
+			}
+			time.Sleep(time.Second)
+		}
+	}()
+	cxx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+loop:
+	for {
+		select {
+		case v, ok := <-result:
+			if !ok {
+				break
+			}
+			if !v {
+				break loop
+			}
+		case <-cxx.Done():
+			break loop
+		}
+	}
+}
+
+// Install 安装
 func (w *WinService) Install(ctx context.Context) (err error) {
 	var exePath string
 	exePath, err = os.Executable()
@@ -86,7 +132,7 @@ func (w *WinService) Install(ctx context.Context) (err error) {
 					vlog.Error(ctx, err)
 					return
 				}
-				time.Sleep(3 * time.Second)
+				w.waitServiceDelete(ctx, m)
 			} else {
 				err = fmt.Errorf("service %s is already installed", service)
 				vlog.Warning(ctx, err)
@@ -152,8 +198,8 @@ func main() {
 		err    error
 		server = &WinService{
 			ServiceName:               "AATestGoServer",
-			ServiceDisplayName:        "AATestGoServer Display Name",
-			ServiceDescription:        "AATestGoServer Description",
+			ServiceDisplayName:        "AATestGoServer 服务",
+			ServiceDescription:        "AATestGoServer 描述",
 			AutoStart:                 true,
 			ForceReinstallOnDuplicate: true,
 		}
