@@ -10,6 +10,7 @@ import (
 	"tools_local_mix_proxy/internal/cmd"
 
 	"github.com/gogf/gf/v2/os/gctx"
+	"github.com/marcellowy/go-common/gogf/vconfig"
 	"github.com/marcellowy/go-common/gogf/vlog"
 	"github.com/marcellowy/go-common/tools"
 	"golang.org/x/sys/windows/svc"
@@ -112,6 +113,7 @@ func (w *WinService) Install(ctx context.Context) (err error) {
 		vlog.Errorf(ctx, "Failed to get absolute path of executable: %v", err)
 		return
 	}
+	configFile := filepath.Join(filepath.Dir(exePath), "manifest/config/config.yaml")
 	var m *mgr.Mgr
 	if m, err = mgr.Connect(); err != nil {
 		vlog.Errorf(ctx, "Failed to connect to service manager. %v", err)
@@ -150,7 +152,7 @@ func (w *WinService) Install(ctx context.Context) (err error) {
 		DisplayName: w.ServiceDisplayName,
 		Description: w.ServiceDescription,
 		StartType:   startType,
-	})
+	}, fmt.Sprintf("--gf.gcfg.file=%s", configFile))
 	if err != nil {
 		vlog.Errorf(ctx, "Failed to create service %s: %v", w.ServiceName, err)
 		return
@@ -197,36 +199,39 @@ func main() {
 		ctx    = gctx.New()
 		err    error
 		server = &WinService{
-			ServiceName:               "AATestGoServer",
-			ServiceDisplayName:        "AATestGoServer 服务",
-			ServiceDescription:        "AATestGoServer 描述",
+			ServiceName:               "AATestGoServer1",
+			ServiceDisplayName:        "AATestGoServer1 服务",
+			ServiceDescription:        "AATestGoServer1 描述",
 			AutoStart:                 true,
 			ForceReinstallOnDuplicate: true,
 		}
 	)
-	vlog.Info(ctx, "================== start ==================")
+	vlog.Info(ctx, "================== start ==================", Version)
+	vlog.Info(ctx, "listen:", vconfig.Get("server.address"))
 	if len(os.Args) > 1 {
 		action := strings.ToLower(os.Args[1])
 		vlog.Info(ctx, "cli action:", action)
-		switch action {
-		case "install":
-			if err = server.Install(ctx); err != nil {
-				vlog.Error(ctx, err)
+		if action[0:2] != "--" {
+			switch action {
+			case "install":
+				if err = server.Install(ctx); err != nil {
+					vlog.Error(ctx, err)
+					return
+				}
+				vlog.Info(ctx, "install success")
 				return
-			}
-			vlog.Info(ctx, "install success")
-			return
-		case "uninstall":
-			if err = server.Uninstall(ctx); err != nil {
-				vlog.Error(ctx, err)
+			case "uninstall":
+				if err = server.Uninstall(ctx); err != nil {
+					vlog.Error(ctx, err)
+					return
+				}
+				vlog.Info(ctx, "uninstall success")
 				return
+			default:
+				vlog.Warningf(ctx, "unknown action: %s", action)
 			}
-			vlog.Info(ctx, "uninstall success")
 			return
-		default:
-			vlog.Warningf(ctx, "unknown action: %s", action)
 		}
-		return
 	}
 	if ok, _ := svc.IsWindowsService(); ok {
 		if err = svc.Run(server.ServiceName, &WinService{}); err != nil {
