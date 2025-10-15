@@ -55,7 +55,6 @@ loop:
 	return false, 0
 }
 
-// Install 安装
 func (w *WinService) Install(ctx context.Context) (err error) {
 	var exePath string
 	exePath, err = os.Executable()
@@ -153,8 +152,8 @@ func main() {
 		err    error
 		server = &WinService{
 			ServiceName:               "AATestGoServer",
-			ServiceDisplayName:        "AATestGoServer 服务",
-			ServiceDescription:        "AATestGoServer 描述",
+			ServiceDisplayName:        "AATestGoServer Display Name",
+			ServiceDescription:        "AATestGoServer Description",
 			AutoStart:                 true,
 			ForceReinstallOnDuplicate: true,
 		}
